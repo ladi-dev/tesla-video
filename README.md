@@ -8,13 +8,6 @@ A diagnostic **probe** to map Tesla browser capabilities + a fully-functional **
 
 ## Background
 
-The Tesla browser runs on **QtWebEngine** (embedded Chromium). It is accessible in both Park and Drive modes — but with restrictions:
-
-- `<video>` elements are **paused** immediately in Drive (last frame frozen, audio continues)
-- `getUserMedia` returns an error (microphone blocked at compile time)
-- Certain Chromium APIs are limited or missing
-
-This project demonstrates how to work around these limitations using only what the browser provides.
 
 ## Architecture
 
@@ -173,11 +166,11 @@ A standalone diagnostic page that systematically tests the Tesla browser's capab
 
 ### Twitch Client (`/twitch-client/`)
 
-Uses a two-pipe architecture to bypass the `<video>` restriction:
+Uses a two-pipe architecture to not use the `<video>`:
 
 **Video**: `yt-dlp` resolves the Twitch stream URL → `ffmpeg` encodes to MPEG1-TS → WebSocket binary → **JSMpeg** (pure JS + WebGL decoder) → canvas at 30fps
 
-**Audio**: Separate HTTP stream → `ffmpeg` encodes to low-bitrate MP3 → native `<audio>` element (Tesla doesn't block audio)
+**Audio**: Separate HTTP stream → `ffmpeg` encodes to low-bitrate MP3 → native `<audio>` element 
 
 The video waits for audio to start playing before launching, then compensates for the audio endpoint's ~5s buffer delay by seeking forward.
 
@@ -194,7 +187,7 @@ MPEG1 with inter-frame compression (P-frames) is ~5x more efficient than sending
 
 ### Key bypass insight
 
-The `<video>` element is hooked by Tesla's system — they call `video.pause()` at the OS level, and `drawImage(video, canvas)` produces a black frame when the source is paused. The solution: **never use `<video>`**. Send individual frames (or MPEG1 transport stream) over WebSocket, decode client-side, and render on a `<canvas>`.
+The solution: **never use `<video>`**. Send individual frames (or MPEG1 transport stream) over WebSocket, decode client-side, and render on a `<canvas>`.
 
 ## Probe results (Tesla Chromium)
 
@@ -212,7 +205,7 @@ The `<video>` element is hooked by Tesla's system — they call `video.pause()` 
 
 ## Known limitations
 
-- **Microphone**: `getUserMedia` is blocked at the Chromium compilation level. Not bypassable from JavaScript.
+- **Microphone**: `getUserMedia` is blocked at the Chromium compilation level.
 - **Audio latency**: ~5s delay between video and audio (separate HTTP endpoint buffering)
 - **No native controls**: Volume, playback, and sync must be controlled via the custom UI
 - **ffmpeg dependency**: The server requires ffmpeg on the path with mpeg1video and libmp3lame support
